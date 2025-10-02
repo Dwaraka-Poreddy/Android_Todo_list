@@ -1,14 +1,17 @@
 package com.example.myshoppinglistapp.ui.components
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.myshoppinglistapp.model.ShoppingItem
@@ -33,10 +36,10 @@ fun ShoppingListItem(
         Text(text = "Qty: ${item.quantity}", modifier = modifier.padding(8.dp))
         Row(modifier = modifier.padding(8.dp)) {
             IconButton(onClick = onEditClick) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Btn")
+                Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit Btn")
             }
             IconButton(onClick = onDeleteClick) {
-                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Btn")
+                Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete Btn")
             }
         }
     }

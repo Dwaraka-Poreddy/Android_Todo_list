@@ -1,6 +1,6 @@
 package com.example.myshoppinglistapp.ui
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,24 +9,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.myshoppinglistapp.model.ShoppingItem
 import com.example.myshoppinglistapp.ui.components.ShoppingItemEditor
 import com.example.myshoppinglistapp.ui.components.ShoppingListItem
+import com.example.myshoppinglistapp.viewmodel.ShoppingListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShoppingListScreen(modifier: Modifier = Modifier) {
-    var sItems by remember { mutableStateOf(listOf<ShoppingItem>()) }
-    var showDialog by remember { mutableStateOf(false) }
+fun ShoppingListScreen(
+    modifier: Modifier = Modifier,
+    viewModel: ShoppingListViewModel
+) {
     var itemName by remember { mutableStateOf("") }
-    var itemQuantity by remember { mutableStateOf("") }
-    var idTracker by remember { mutableIntStateOf(0) }
+    var itemQuantity by remember { mutableStateOf("1") }
 
     Box(
         modifier = modifier
@@ -35,7 +35,7 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Text(
-                text = "Shopping List",
+                "Shopping List",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
@@ -55,24 +55,25 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(sItems) { item ->
+                    items(viewModel.items) { item ->
                         if (item.isEditing) {
                             ShoppingItemEditor(
-                                item = item, onEditComplete = { editedName, editedQuantity ->
-                                    sItems = sItems.map { it.copy(isEditing = false) }
-                                    val editedItem = sItems.find { it.id == item.id }
-                                    editedItem?.let {
-                                        it.name = editedName
-                                        it.quantity = editedQuantity
-                                    }
-                                }, modifier = modifier
+                                item = item,
+                                onEditComplete = { editedName, editedQuantity ->
+                                    viewModel.editItem(item.id, editedName, editedQuantity)
+                                },
+                                modifier = modifier
                             )
                         } else {
-                            ShoppingListItem(item = item, onEditClick = {
-                                sItems = sItems.map { it.copy(isEditing = it.id == item.id) }
-                            }, onDeleteClick = {
-                                sItems = sItems - item
-                            })
+                            ShoppingListItem(
+                                item = item,
+                                onEditClick = {
+                                    viewModel.setEditing(item.id)
+                                },
+                                onDeleteClick = {
+                                    viewModel.deleteItem(item.id)
+                                }
+                            )
                         }
                     }
                 }
@@ -89,7 +90,9 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
                 )
         ) {
             Button(
-                onClick = { showDialog = true },
+                onClick = {
+                    viewModel.showDialog()
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
@@ -97,31 +100,33 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF02042e))
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "Add Icon",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = "Add Item",
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Add Icon",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Add Item",
+                    color = Color.White,
+                )
             }
         }
     }
 
-    if (showDialog) {
-        val focusRequester = remember { FocusRequester() }
+    if (viewModel.isDialogVisible) {
+        val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
 
         LaunchedEffect(Unit) {
             focusRequester.requestFocus()
         }
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = {
+                viewModel.hideDialog()
+                itemName = ""
+                itemQuantity = "1"
+            },
             containerColor = Color(0xFF02042E).copy(alpha = 0.9f),
             shape = RoundedCornerShape(16.dp),
             confirmButton = {
@@ -133,15 +138,7 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
                 ) {
                     Button(onClick = {
                         if (itemName.isNotBlank()) {
-                            val newItem = ShoppingItem(
-                                id = idTracker,
-                                name = itemName,
-                                quantity = itemQuantity.toIntOrNull() ?: 1,
-                                isEditing = false,
-                            )
-                            sItems = sItems + newItem
-                            idTracker += 1
-                            showDialog = false
+                            viewModel.addItem(itemName, itemQuantity.toIntOrNull() ?: 1)
                             itemName = ""
                             itemQuantity = "1"
                         }
@@ -150,7 +147,9 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
                     }
 
                     Button(onClick = {
-                        showDialog = false
+                        viewModel.hideDialog()
+                        itemName = ""
+                        itemQuantity = "1"
                     }) {
                         Text("Cancel")
                     }
@@ -177,7 +176,8 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
                             unfocusedIndicatorColor = Color.White.copy(alpha = 0.3f),
                             disabledIndicatorColor = Color.Gray,
                         ),
-                        placeholder = { Text("Item Name", color = Color.White.copy(alpha = 0.5f)) })
+                        placeholder = { Text("Item Name", color = Color.White.copy(alpha = 0.5f)) }
+                    )
                     OutlinedTextField(
                         value = itemQuantity,
                         onValueChange = { itemQuantity = it },
@@ -195,8 +195,10 @@ fun ShoppingListScreen(modifier: Modifier = Modifier) {
                             unfocusedIndicatorColor = Color.White.copy(alpha = 0.3f),
                             disabledIndicatorColor = Color.Gray,
                         ),
-                        placeholder = { Text("Quantity", color = Color.White.copy(alpha = 0.5f)) })
+                        placeholder = { Text("Quantity", color = Color.White.copy(alpha = 0.5f)) }
+                    )
                 }
-            })
+            }
+        )
     }
 }
